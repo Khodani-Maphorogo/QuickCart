@@ -1,79 +1,52 @@
-import { auth, getAuth } from "@clerk/nextjs/server";
-import { v2 as cloudinary } from "cloudinary";
 import { NextResponse } from "next/server";
+import connectDB from "@/libs/mongodb";
+import Product from "@/models/Product";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 
+export async function POST(req) {
+  try {
+    await connectDB();
 
-// Configure Cloudinary 
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+    // ✅ Read multipart form-data
+    const formData = await req.formData();
+    const name = formData.get("name");
+    const price = formData.get("price");
+    const files = formData.getAll("files");
 
+    // 🧱 Create uploads folder if missing
+    const uploadDir = path.join(process.cwd(), "public/uploads");
+    await mkdir(uploadDir, { recursive: true });
 
-export async function POST(request) {
-    try {
+    const imagePaths = [];
 
-        const { userId } = getAuth(request);
-
-        const isSeller = await authSeller(userId);
-
-        if (!isSeller) {
-            return new Response(JSON.stringify({ success: false, message: "Unauthorized. Only sellers can add products." }), { status: 401 });
-        }
-
-        const formData = await request.formData();
-
-        const name = formData.get('name');
-        const description = formData.get('description');
-        const category = formData.get('category');
-        const price = formData.get('price');
-        const offerPrice = formData.get('offerPrice');
-        
-        const files = formData.getAll('images');
-
-        if (!files || files.length === 0) {
-            return new Response(JSON.stringify({ success: false, message: "Please upload at least one image." }), { status: 400 });
-        }
-
-        const result = await Promise.all(
-            files.map(async (file) => {
-                const arraybuffer = await file.arrayBuffer();
-                const buffer = Buffer.from(arraybuffer);
-
-                return new Promise((resolve, reject) => {
-                  const stream =  cloudinary.uploader.upload_stream(
-                        { resource_type: 'auto' },
-                        (error, result) => {
-                            if (error) {
-                                reject(error);
-                            } else {
-                                resolve(result);
-                            }
-                        }
-                    )
-                    stream.end(buffer);
-                });
-            })
-        );
-
-        const image = result.map( result => result.secure_url);
-
-        await connectDB();
-        const newProduct = await Product.create({
-            userId,
-            name,
-            description,
-            category,
-            price: Number(price),
-            offerPrice: Number(offerPrice),
-            images: image,
-            date: Date.now()
-        })
-
-        return NextResponse.json({ success: true, message: "Product added successfully", product: newProduct }, { status: 201 });
-   
-    } catch (error) {
-        return new Response(JSON.stringify({ success: false, message: error.message }), { status: 500 });
+    // 📸 Save uploaded files
+    for (const file of files) {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const fileName = `${Date.now()}-${file.name}`;
+      const filePath = path.join(uploadDir, fileName);
+      await writeFile(filePath, buffer);
+      imagePaths.push(`/uploads/${fileName}`);
     }
+
+    // 💾 Save to MongoDB
+    const newProduct = await Product.create({
+      name,
+      price: parseFloat(price),
+      images: imagePaths,
+    });
+
+    // ✅ Explicitly return 200 OK
+    return NextResponse.json(
+      { success: true, message: "Product added successfully", product: newProduct },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error adding product:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to add product" },
+      { status: 500 }
+    );
+  }
 }
