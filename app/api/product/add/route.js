@@ -8,19 +8,18 @@ export async function POST(req) {
   try {
     await connectDB();
 
-    // ✅ Read multipart form-data
     const formData = await req.formData();
     const name = formData.get("name");
     const price = formData.get("price");
-    const files = formData.getAll("files");
+    const offerPrice = formData.get("offerPrice"); // ✅ optional
+    const category = formData.get("category");     // ✅ new
+    const files = formData.getAll("images");       // images array
 
-    // 🧱 Create uploads folder if missing
     const uploadDir = path.join(process.cwd(), "public/uploads");
     await mkdir(uploadDir, { recursive: true });
 
     const imagePaths = [];
 
-    // 📸 Save uploaded files
     for (const file of files) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
@@ -30,14 +29,14 @@ export async function POST(req) {
       imagePaths.push(`/uploads/${fileName}`);
     }
 
-    // 💾 Save to MongoDB
     const newProduct = await Product.create({
       name,
       price: parseFloat(price),
+      offerPrice: offerPrice ? parseFloat(offerPrice) : undefined,
+      category,      // ✅ save category
       images: imagePaths,
     });
 
-    // ✅ Explicitly return 200 OK
     return NextResponse.json(
       { success: true, message: "Product added successfully", product: newProduct },
       { status: 200 }

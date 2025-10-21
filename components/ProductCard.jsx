@@ -5,7 +5,12 @@ import { useAppContext } from '@/context/AppContext';
 
 const ProductCard = ({ product }) => {
 
-    const { currency, router } = useAppContext()
+    const { currency, router } = useAppContext();
+
+    // Fallback to a placeholder image if product.image is missing
+    const imageSrc = product.image && product.image.length > 0
+        ? product.image[0]
+        : '/placeholder.png'; // make sure you have a placeholder in public folder
 
     return (
         <div
@@ -14,8 +19,8 @@ const ProductCard = ({ product }) => {
         >
             <div className="cursor-pointer group relative bg-gray-500/10 rounded-lg w-full h-52 flex items-center justify-center">
                 <Image
-                    src={product.image[0]}
-                    alt={product.name}
+                    src={imageSrc}
+                    alt={product.name || 'Product Image'}
                     className="group-hover:scale-105 transition object-cover w-4/5 h-4/5 md:w-full md:h-full"
                     width={800}
                     height={800}
@@ -60,3 +65,4 @@ const ProductCard = ({ product }) => {
 }
 
 export default ProductCard
+

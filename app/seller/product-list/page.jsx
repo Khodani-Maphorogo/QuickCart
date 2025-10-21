@@ -1,143 +1,80 @@
-"use client";
-import React, { useState } from "react";
+'use client';
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import toast from "react-hot-toast";
 
-const AddProductForm = () => {
-  const [product, setProduct] = useState({
-    name: "",
-    description: "",
-    price: "",
-    category: "",
-    images: [],
-  });
+export default function ProductListPage() {
+  const [products, setProducts] = useState([]);
 
-  const [loading, setLoading] = useState(false);
-
-  // Handle input changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProduct((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Handle image URLs
-  const handleImagesChange = (e) => {
-    const value = e.target.value;
-    // Split by commas to allow multiple URLs
-    setProduct((prev) => ({ ...prev, images: value.split(",").map((url) => url.trim()) }));
-  };
-
-  // Handle form submit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // ✅ Basic validation
-    if (!product.name || !product.price) {
-      toast.error("Product name and price are required.");
-      return;
-    }
-
-    const priceNumber = parseFloat(product.price);
-    if (isNaN(priceNumber)) {
-      toast.error("Price must be a valid number.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const token = localStorage.getItem("token"); // or getToken() from context
-      const response = await axios.post(
-        "/api/product/add",
-        {
-          ...product,
-          price: priceNumber, // ensure number
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.data?.product) {
-        toast.success("Product added successfully!");
-        setProduct({
-          name: "",
-          description: "",
-          price: "",
-          category: "",
-          images: [],
-        });
-      } else {
-        toast.error(response.data?.error || "Failed to add product.");
+  // Fetch products on page load
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get("/api/product"); // Make sure GET API exists
+        setProducts(res.data.products || []);
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
       }
-    } catch (err) {
-      console.error("Error adding product:", err);
-      toast.error(err.response?.data?.error || err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    fetchProducts();
+  }, []);
 
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded-md shadow-md">
-      <h2 className="text-xl font-semibold mb-4">Add New Product</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <input
-          type="text"
-          name="name"
-          value={product.name}
-          onChange={handleChange}
-          placeholder="Product Name"
-          className="border p-2 rounded"
-          required
-        />
-        <input
-          type="text"
-          name="description"
-          value={product.description}
-          onChange={handleChange}
-          placeholder="Description"
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          name="price"
-          value={product.price}
-          onChange={handleChange}
-          placeholder="Price (e.g., 99.99)"
-          className="border p-2 rounded"
-          required
-        />
-        <input
-          type="text"
-          name="category"
-          value={product.category}
-          onChange={handleChange}
-          placeholder="Category"
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          name="images"
-          value={product.images.join(", ")}
-          onChange={handleImagesChange}
-          placeholder="Image URLs (comma separated)"
-          className="border p-2 rounded"
-        />
+    <div className="w-full flex justify-center p-6">
+      <div className="w-full max-w-5xl"> {/* Reduce width here */}
+        {/* Page Heading */}
+        <h1 className="text-3xl font-bold mb-6 text-center">All Products</h1>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-orange-600 text-white py-2 rounded hover:bg-orange-700 transition"
-        >
-          {loading ? "Adding..." : "Add Product"}
-        </button>
-      </form>
+        {products.length === 0 ? (
+          <p className="text-center text-gray-500">No products available.</p>
+        ) : (
+          <table className="w-full border border-gray-200 rounded table-auto">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left">Product</th>
+                <th className="p-3 text-left">Category</th>
+                <th className="p-3 text-left">Price ($)</th>
+                <th className="p-3 text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product._id} className="border-t hover:bg-gray-50">
+                  {/* Product name with image */}
+                  <td className="p-3 flex items-center gap-3">
+                    {product.images && product.images.length > 0 && (
+                      <img
+                        src={product.images[0]}
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded"
+                      />
+                    )}
+                    <span>{product.name}</span>
+                  </td>
+
+                  {/* Category */}
+                  <td className="p-3">{product.category || "-"}</td>
+
+                  {/* Price */}
+                  <td className="p-3">${product.price}</td>
+
+                  {/* Visit button */}
+                  <td className="p-3">
+                    <a
+                      href={`/product/${product._id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-500"
+                    >
+                      Visit
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
-};
+}
 
-export default AddProductForm;

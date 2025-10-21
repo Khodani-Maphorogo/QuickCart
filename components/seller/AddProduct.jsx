@@ -6,6 +6,8 @@ import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/solid";
 const AddProduct = () => {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [offerPrice, setOfferPrice] = useState("");
+  const [category, setCategory] = useState(""); // ✅ added
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null); // 'success' | 'error'
@@ -18,8 +20,10 @@ const AddProduct = () => {
     const formData = new FormData();
     formData.append("name", name);
     formData.append("price", price);
+    if (offerPrice) formData.append("offerPrice", offerPrice);
+    formData.append("category", category); // ✅ added
     for (let i = 0; i < files.length; i++) {
-      formData.append("files", files[i]);
+      formData.append("images", files[i]);
     }
 
     try {
@@ -27,11 +31,12 @@ const AddProduct = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // ✅ handle 200 or 201 response
       if (res.status >= 200 && res.status < 300 && res.data.success) {
         setStatus("success");
         setName("");
         setPrice("");
+        setOfferPrice("");
+        setCategory(""); // ✅ reset category
         setFiles([]);
         document.querySelector("form").reset();
       } else {
@@ -64,7 +69,7 @@ const AddProduct = () => {
           />
         </div>
 
-        {/* Product Price */}
+        {/* Price */}
         <div>
           <label className="block text-gray-600 mb-1">Price (R)</label>
           <input
@@ -77,7 +82,32 @@ const AddProduct = () => {
           />
         </div>
 
-        {/* Product Images */}
+        {/* Offer Price */}
+        <div>
+          <label className="block text-gray-600 mb-1">Offer Price (optional)</label>
+          <input
+            type="number"
+            value={offerPrice}
+            onChange={(e) => setOfferPrice(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            placeholder="Enter offer price"
+          />
+        </div>
+
+        {/* Category */}
+        <div>
+          <label className="block text-gray-600 mb-1">Category</label>
+          <input
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            placeholder="Enter product category"
+            required
+          />
+        </div>
+
+        {/* Images */}
         <div>
           <label className="block text-gray-600 mb-1">Upload Images</label>
           <input
@@ -102,26 +132,18 @@ const AddProduct = () => {
         </button>
       </form>
 
-      {/* ✅ Success / ❌ Error Message */}
+      {/* Success / Error Message */}
       {status && (
-        <div
-          className={`flex items-center justify-center space-x-2 mt-4 transition-all duration-500 ${
-            status === "success" ? "opacity-100" : "opacity-100"
-          }`}
-        >
+        <div className={`flex items-center justify-center space-x-2 mt-4 transition-all duration-500`}>
           {status === "success" ? (
             <>
               <CheckCircleIcon className="h-6 w-6 text-green-500 animate-bounce" />
-              <p className="text-green-600 font-medium">
-                Product added successfully!
-              </p>
+              <p className="text-green-600 font-medium">Product added successfully!</p>
             </>
           ) : (
             <>
               <XCircleIcon className="h-6 w-6 text-red-500 animate-pulse" />
-              <p className="text-red-600 font-medium">
-                Failed to add product!
-              </p>
+              <p className="text-red-600 font-medium">Failed to add product!</p>
             </>
           )}
         </div>

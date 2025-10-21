@@ -27,7 +27,19 @@ export const AppContextProvider = ({ children }) => {
 
     // Fetch products (dummy data)
     const fetchProductData = async () => {
-        setProducts(productsDummyData);
+        try {
+            
+            const { data } = await axios.get('/api/product/list');
+
+            if (data.success) {
+                setProducts(data.products)
+            } else{
+                toast.error(data.message)
+            }
+
+        } catch (error) {
+             toast.error(error.message)
+        }
     }
 
     // Fetch real user data from your API using Clerk token
